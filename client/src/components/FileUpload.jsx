@@ -4,7 +4,7 @@ import { Upload } from "lucide-react";
 import { useSelector } from "react-redux";
 import io from "socket.io-client";
 
-const socket = io("http://localhost:8000"); // Replace with your backend URL
+const socket = io("https://filevault-mbnp.onrender.com");
 
 const FileUpload = () => {
   const [files, setFiles] = useState([]);
@@ -26,7 +26,7 @@ const FileUpload = () => {
       }
 
       const response = await axios.get(
-        "http://localhost:8000/api/protected/files",
+        "https://filevault-mbnp.onrender.com/api/protected/files",
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -89,7 +89,7 @@ const FileUpload = () => {
       setProgress(0);
 
       await axios.post(
-        "http://localhost:8000/api/protected/files/upload",
+        "https://filevault-mbnp.onrender.com/api/protected/files/upload",
         formData,
         {
           headers: {
@@ -125,7 +125,7 @@ const FileUpload = () => {
       }
 
       await axios.delete(
-        `http://localhost:8000/api/protected/files/${fileId}`,
+        `https://filevault-mbnp.onrender.com/api/protected/files/${fileId}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }

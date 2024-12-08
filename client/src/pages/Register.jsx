@@ -21,7 +21,7 @@ const Register = () => {
     try {
       // Make API request to backend
       const response = await axios.post(
-        "http://localhost:8000/api/auth/register",
+        "https://filevault-mbnp.onrender.com/api/auth/register",
         {
           email: formData.email,
           password: formData.password,
