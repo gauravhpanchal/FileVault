@@ -4,7 +4,7 @@ import { Upload } from "lucide-react";
 import { useSelector } from "react-redux";
 import io from "socket.io-client";
 
-const socket = io("https://filevault-mbnp.onrender.com");
+const socket = io("https://filevault-mbnp.onrender.com/");
 
 const FileUpload = () => {
   const [files, setFiles] = useState([]);
