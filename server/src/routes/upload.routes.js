@@ -7,7 +7,7 @@ import { io } from "../index.js";
 import path from "path";
 
 const router = express.Router();
-const baseURL = "http://localhost:5173/uploads/";
+const baseURL = "https://file-vault-nine.vercel.app/uploads/";
 
 // Upload PDFs
 router.post(
