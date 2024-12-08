@@ -2,14 +2,18 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { Upload } from "lucide-react";
 import { useSelector } from "react-redux";
+import io from "socket.io-client";
+
+const socket = io("http://localhost:8000"); // Replace with your backend URL
 
 const FileUpload = () => {
   const [files, setFiles] = useState([]);
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [error, setError] = useState("");
   const [isUploading, setIsUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
 
-  // Current Loggedin User
+  // Current Logged-in User
   const user = useSelector((state) => state.auth.user.email);
 
   const fetchFiles = async () => {
@@ -40,6 +44,29 @@ const FileUpload = () => {
 
   useEffect(() => {
     fetchFiles();
+
+    // Handle real-time updates from the backend
+    socket.on("fileUploaded", (uploadedFiles) => {
+      setUploadedFiles((prevFiles) => {
+        const updatedFiles = prevFiles;
+        uploadedFiles.forEach((file) => {
+          if (prevFiles.findIndex((x) => x._id == file._id) == -1) {
+            updatedFiles.push(file);
+          }
+        });
+        return updatedFiles;
+      });
+    });
+
+    socket.on("fileDeleted", ({ id }) => {
+      setUploadedFiles((prevFiles) =>
+        prevFiles.filter((file) => file._id !== id)
+      );
+    });
+
+    // return () => {
+    //   socket.disconnect();
+    // };
   }, []);
 
   const handleFileChange = (event) => {
@@ -59,6 +86,8 @@ const FileUpload = () => {
       }
 
       setIsUploading(true);
+      setProgress(0);
+
       await axios.post(
         "http://localhost:8000/api/protected/files/upload",
         formData,
@@ -68,15 +97,21 @@ const FileUpload = () => {
             "Content-Type": "multipart/form-data",
             User: user,
           },
+          onUploadProgress: (progressEvent) => {
+            const percent = Math.round(
+              (progressEvent.loaded * 100) / progressEvent.total
+            );
+            setProgress(percent);
+          },
         }
       );
-      fetchFiles(); // Refresh uploaded files list
       setFiles([]); // Clear selected files
       setError(""); // Clear errors
     } catch (error) {
       setError("Error uploading files. Please try again later.");
     } finally {
       setIsUploading(false);
+      setProgress(0); // Reset progress
     }
   };
 
@@ -95,7 +130,6 @@ const FileUpload = () => {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-      fetchFiles(); // Refresh uploaded files list
       setError(""); // Clear errors
     } catch (error) {
       setError("Error deleting file. Please try again later.");
@@ -131,8 +165,18 @@ const FileUpload = () => {
         }`}
         disabled={isUploading || !files.length}
       >
-        {isUploading ? "Uploading..." : "Upload Files"}
+        {isUploading ? `Uploading... ${progress}%` : "Upload Files"}
       </button>
+
+      {/* Progress Bar */}
+      {isUploading && (
+        <div className="w-full bg-gray-200 rounded-lg mt-4">
+          <div
+            className="bg-indigo-500 h-2 rounded-lg"
+            style={{ width: `${progress}%` }}
+          ></div>
+        </div>
+      )}
 
       {/* Selected Files Preview */}
       {files.length > 0 && (
@@ -170,28 +214,18 @@ const FileUpload = () => {
                 <img
                   src="https://www.pcworld.com/wp-content/uploads/2024/11/pdf-icon-1.jpg?quality=50&strip=all"
                   alt="PDF Icon"
-                  className="h-16 w-16 mx-auto"
+                  className="h-16 w-16 mx-auto object-cover"
                 />
-                <p className="mt-2 text-center text-sm">{file.filename}</p>
-                <p className="text-center text-xs text-gray-500">
-                  {file.size} bytes
+                <p className="text-blue-500 line-clamp-1">{file.filename}</p>
+                <p className="text-xs mt-2 text-gray-500 text-center">
+                  Size: {file.size} bytes
                 </p>
-                <div className="mt-2 flex gap-2">
-                  <a
-                    href={file.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-1/2 px-4 py-2 text-center bg-blue-500 text-white rounded-lg hover:bg-blue-600"
-                  >
-                    View
-                  </a>
-                  <button
-                    onClick={() => handleDelete(file._id)}
-                    className="w-1/2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
-                  >
-                    Delete
-                  </button>
-                </div>
+                <button
+                  onClick={() => handleDelete(file._id)}
+                  className="w-full px-4 py-2 mt-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+                >
+                  Delete
+                </button>
               </li>
             ))}
           </ul>

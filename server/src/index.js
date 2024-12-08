@@ -7,7 +7,9 @@ import authRoutes from "./routes/auth.routes.js";
 import protectedRoutes from "./routes/protectedRoutes.js";
 import fileRoutes from "./routes/upload.routes.js";
 import path from "path";
+import http from "http";
 import { fileURLToPath } from "url";
+import { Server } from "socket.io";
 
 dotenv.config();
 
@@ -36,8 +38,27 @@ mongoose
   .then(() => console.log("Connected to MongoDB"))
   .catch((err) => console.error("MongoDB connection error:", err));
 
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: "http://localhost:5173",
+    credentials: true,
+  },
+});
+
+// Socket.io connection
+io.on("connection", (socket) => {
+  console.log("A user connected:", socket.id);
+
+  socket.on("disconnect", () => {
+    console.log("A user disconnected:", socket.id);
+  });
+});
+
 // Start server
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
+export { io };

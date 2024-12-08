@@ -3,9 +3,10 @@ import { authMiddleware } from "../middlewares/auth.middleware.js";
 import PDF from "../models/Pdf.model.js";
 import { upload } from "../middlewares/upload.middleware.js";
 import fs from "fs";
+import { io } from "../index.js";
+import path from "path";
 
 const router = express.Router();
-
 const baseURL = "http://localhost:5173/uploads/";
 
 // Upload PDFs
@@ -26,6 +27,10 @@ router.post(
         };
       });
       const uploadedFiles = await PDF.insertMany(pdfs);
+      console.log(uploadedFiles);
+
+      //Notify about uploaded files
+      io.emit("fileUploaded", uploadedFiles);
       res
         .status(201)
         .json({ message: "Files uploaded successfully", files: uploadedFiles });
@@ -61,6 +66,10 @@ router.delete("/:id", authMiddleware, async (req, res) => {
 
     fs.unlinkSync(file.filepath); // Delete
     await PDF.findByIdAndDelete(req.params.id);
+
+    //Notify about uploaded files
+    io.emit("fileDeleted", { id: req.params.id });
+
     res.status(200).json({ message: "File deleted successfully" });
   } catch (error) {
     res
