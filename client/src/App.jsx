@@ -5,7 +5,7 @@ import { store, persistor } from "./store/store";
 import { PersistGate } from "redux-persist/integration/react";
 import { Toaster } from "react-hot-toast";
 import Navbar from "./components/Navbar";
-import Home from "./pages/Home";
+import { HomePage } from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
@@ -19,7 +19,7 @@ function App() {
           <div className="min-h-screen bg-gray-50">
             <Navbar />
             <Routes>
-              <Route path="/" element={<Home />} />
+              <Route path="/" element={<HomePage />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route
@@ -31,6 +31,7 @@ function App() {
                 }
               />
             </Routes>
+            
             <Toaster
               position="top-center"
               toastOptions={{
