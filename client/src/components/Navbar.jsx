@@ -13,9 +13,9 @@ const Navbar = () => {
   const handleLogout = async () => {
     try {
       await axios.post(
-        "https://filevault-mbnp.onrender.com/api/auth/logout",
-        {},
-        { withCredentials: true }
+        "https://filevault-mbnp.onrender.com/api/auth/logout"
+        // {},
+        // { withCredentials: true }
       );
 
       dispatch(logout());
