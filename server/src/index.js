@@ -24,7 +24,6 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(cors({ origin: "*", credentials: true }));
 
-// Serve static files (for uploaded PDFs)
 app.use("/uploads", express.static(path.join(__dirname, "public/uploads")));
 
 // Routes

@@ -1,14 +1,11 @@
 import React, { useState } from "react";
-import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { login } from "../store/authSlice";
+import { toast } from "react-hot-toast";
 import { UserPlus } from "lucide-react";
 import axios from "axios";
 
 const Register = () => {
-  const dispatch = useDispatch();
   const navigate = useNavigate();
-  const [error, setError] = useState("");
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -16,10 +13,11 @@ const Register = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
 
     try {
-      // Make API request to backend
+      // Show a loading toast
+      toast.loading("Creating your account...", { id: "register" });
+
       const response = await axios.post(
         "https://filevault-mbnp.onrender.com/api/auth/register",
         {
@@ -29,15 +27,18 @@ const Register = () => {
       );
 
       if (response.status === 201) {
-        // Navigate to the login page or dashboard after successful registration
+        // Show success toast
+        toast.success("Account created successfully!", { id: "register" });
+
+        // Navigate to the login page
         navigate("/login");
       }
     } catch (err) {
-      // Handle errors (e.g., email already exists)
+      // Handle specific errors with appropriate toasts
       if (err.response && err.response.data.message) {
-        setError(err.response.data.message);
+        toast.error(err.response.data.message, { id: "register" });
       } else {
-        setError("An error occurred. Please try again.");
+        toast.error("An error occurred. Please try again.", { id: "register" });
       }
     }
   };
@@ -54,9 +55,6 @@ const Register = () => {
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="rounded-md shadow-sm space-y-3">
             <div>
-              <label htmlFor="email" className="sr-only">
-                Email address
-              </label>
               <input
                 id="email"
                 name="email"
@@ -71,9 +69,6 @@ const Register = () => {
               />
             </div>
             <div>
-              <label htmlFor="password" className="sr-only">
-                Password
-              </label>
               <input
                 id="password"
                 name="password"
@@ -88,7 +83,6 @@ const Register = () => {
               />
             </div>
           </div>
-
           <div>
             <button
               type="submit"

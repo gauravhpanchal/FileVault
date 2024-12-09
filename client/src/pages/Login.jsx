@@ -9,7 +9,6 @@ import axios from "axios";
 const Login = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const [error, setError] = useState("");
 
   const [formData, setFormData] = useState({
     email: "",
@@ -18,10 +17,11 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
 
     try {
-      // Make API request to backend
+      // Show a loading toast
+      toast.loading("Logging in...", { id: "login" });
+
       const response = await axios.post(
         "https://filevault-mbnp.onrender.com/api/auth/login",
         {
@@ -32,17 +32,32 @@ const Login = () => {
 
       if (response.status === 200) {
         const { token, user } = response.data;
-        toast.success("Logged in successfully!");
 
+        // Show success toast
+        toast.success("Logged in successfully!", { id: "login" });
+
+        // Save token and navigate
         localStorage.setItem("authToken", token);
         dispatch(login({ email: user.email }));
         navigate("/dashboard");
       }
     } catch (err) {
+      // Handle specific errors
       if (err.response && err.response.data.message) {
-        setError(err.response.data.message);
+        const errorMessage = err.response.data.message;
+
+        // Check for specific error messages
+        if (errorMessage === "User not found") {
+          toast.error("This email is not registered. Please create an account.", {
+            id: "login",
+          });
+        } else if (errorMessage === "Invalid credentials") {
+          toast.error("Incorrect password. Please try again.", { id: "login" });
+        } else {
+          toast.error(errorMessage, { id: "login" });
+        }
       } else {
-        setError("An error occurred. Please try again.");
+        toast.error("An error occurred. Please try again.", { id: "login" });
       }
     }
   };
@@ -59,9 +74,6 @@ const Login = () => {
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="rounded-md space-y-3 shadow-sm ">
             <div>
-              <label htmlFor="email" className="sr-only">
-                Email address
-              </label>
               <input
                 id="email"
                 name="email"
@@ -76,9 +88,6 @@ const Login = () => {
               />
             </div>
             <div>
-              <label htmlFor="password" className="sr-only">
-                Password
-              </label>
               <input
                 id="password"
                 name="password"
@@ -93,7 +102,6 @@ const Login = () => {
               />
             </div>
           </div>
-
           <div>
             <button
               type="submit"

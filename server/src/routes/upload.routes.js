@@ -67,7 +67,7 @@ router.delete("/:id", authMiddleware, async (req, res) => {
     fs.unlinkSync(file.filepath); // Delete
     await PDF.findByIdAndDelete(req.params.id);
 
-    //Notify about uploaded files
+    //Notify about Deleted files
     io.emit("fileDeleted", { id: req.params.id });
 
     res.status(200).json({ message: "File deleted successfully" });
