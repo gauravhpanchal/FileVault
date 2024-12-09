@@ -48,11 +48,16 @@ const Login = () => {
 
         // Check for specific error messages
         if (errorMessage === "User not found") {
-          toast.error("This email is not registered. Please create an account.", {
+          toast.error(
+            "This email is not registered. Please create an account.",
+            {
+              id: "login",
+            }
+          );
+        } else if (errorMessage === "Invalid credentials") {
+          toast.error("Invalid credentials. Please try again.", {
             id: "login",
           });
-        } else if (errorMessage === "Invalid credentials") {
-          toast.error("Incorrect password. Please try again.", { id: "login" });
         } else {
           toast.error(errorMessage, { id: "login" });
         }

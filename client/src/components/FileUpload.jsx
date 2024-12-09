@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { Upload } from "lucide-react";
 import { useSelector } from "react-redux";
+import { toast } from "react-hot-toast";
 import io from "socket.io-client";
 
 const socket = io("https://filevault-mbnp.onrender.com/");
@@ -9,7 +10,6 @@ const socket = io("https://filevault-mbnp.onrender.com/");
 const FileUpload = () => {
   const [files, setFiles] = useState([]);
   const [uploadedFiles, setUploadedFiles] = useState([]);
-  const [error, setError] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [progress, setProgress] = useState(0);
 
@@ -21,7 +21,7 @@ const FileUpload = () => {
       const token = localStorage.getItem("authToken");
 
       if (!token) {
-        setError("You are not logged in. Please log in to view your files.");
+        toast.error("You are not logged in. Please log in to view your files.");
         return;
       }
 
@@ -32,12 +32,11 @@ const FileUpload = () => {
         }
       );
       setUploadedFiles(response.data.files || []);
-      setError(""); // Clear any previous errors
     } catch (error) {
       if (error.response?.status === 401) {
-        setError("You are not authorized to view the files. Please log in.");
+        toast.error("You are not authorized to view the files. Please log in.");
       } else {
-        setError("Error fetching files. Please try again later.");
+        toast.error("Error fetching files. Please try again later.");
       }
     }
   };
@@ -50,27 +49,53 @@ const FileUpload = () => {
       setUploadedFiles((prevFiles) => {
         const updatedFiles = prevFiles;
         uploadedFiles.forEach((file) => {
-          if (prevFiles.findIndex((x) => x._id == file._id) == -1) {
+          if (prevFiles.findIndex((x) => x._id === file._id) === -1) {
             updatedFiles.push(file);
           }
         });
         return updatedFiles;
       });
+
+      // Prevent multiple toasts for the same event
+      if (!toast.isActive("file-uploaded-toast")) {
+        toast.success("New file(s) uploaded!", { id: "file-uploaded-toast" });
+      }
     });
 
     socket.on("fileDeleted", ({ id }) => {
       setUploadedFiles((prevFiles) =>
         prevFiles.filter((file) => file._id !== id)
       );
+
+      // Prevent multiple toasts for the same event
+      if (!toast.isActive("file-deleted-toast")) {
+        toast.success("A file was deleted.", { id: "file-deleted-toast" });
+      }
     });
 
-    // return () => {
-    //   socket.disconnect();
-    // };
+    // Cleanup on unmount
+    return () => {
+      socket.off("fileUploaded");
+      socket.off("fileDeleted");
+    };
   }, []);
 
   const handleFileChange = (event) => {
-    setFiles(event.target.files);
+    const selectedFiles = Array.from(event.target.files);
+    const invalidFiles = selectedFiles.filter(
+      (file) => file.type !== "application/pdf"
+    );
+
+    if (invalidFiles.length > 0) {
+      toast.error(
+        `Invalid file type(s) detected. Only PDF files are allowed.`,
+        { id: "file-type-error" }
+      );
+      return;
+    }
+
+    setFiles(selectedFiles);
+    toast.success("Files ready for upload!");
   };
 
   const handleUpload = async () => {
@@ -81,14 +106,15 @@ const FileUpload = () => {
       const token = localStorage.getItem("authToken");
 
       if (!token) {
-        setError("You are not logged in. Please log in to upload files.");
+        toast.error("You are not logged in. Please log in to upload files.");
         return;
       }
 
       setIsUploading(true);
       setProgress(0);
+      toast.loading("Uploading files...", { id: "upload" });
 
-      await axios.post(
+      const response = await axios.post(
         "https://filevault-mbnp.onrender.com/api/protected/files/upload",
         formData,
         {
@@ -105,10 +131,13 @@ const FileUpload = () => {
           },
         }
       );
+
       setFiles([]); // Clear selected files
-      setError(""); // Clear errors
+      toast.success("Files uploaded successfully!", { id: "upload" });
     } catch (error) {
-      setError("Error uploading files. Please try again later.");
+      toast.error("Error uploading files. Please try again later.", {
+        id: "upload",
+      });
     } finally {
       setIsUploading(false);
       setProgress(0); // Reset progress
@@ -120,7 +149,7 @@ const FileUpload = () => {
       const token = localStorage.getItem("authToken");
 
       if (!token) {
-        setError("You are not logged in. Please log in to delete files.");
+        toast.error("You are not logged in. Please log in to delete files.");
         return;
       }
 
@@ -130,9 +159,10 @@ const FileUpload = () => {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-      setError(""); // Clear errors
+
+      toast.success("File deleted successfully!");
     } catch (error) {
-      setError("Error deleting file. Please try again later.");
+      toast.error("Error deleting file. Please try again later.");
     }
   };
 
@@ -202,7 +232,6 @@ const FileUpload = () => {
 
       {/* Uploaded Files */}
       <div className="mt-6">
-        {error && <p className="text-red-500 mb-4">{error}</p>}
         <h3 className="text-lg font-semibold mb-2">Uploaded Files</h3>
         {uploadedFiles.length > 0 ? (
           <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -230,7 +259,7 @@ const FileUpload = () => {
             ))}
           </ul>
         ) : (
-          !error && <p>No files uploaded yet.</p>
+          <p>No files uploaded yet.</p>
         )}
       </div>
     </div>
