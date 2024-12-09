@@ -44,7 +44,7 @@ const FileUpload = () => {
   useEffect(() => {
     fetchFiles();
 
-    // Handle real-time updates from the backend
+    // Real-time updates from the backend
     socket.on("fileUploaded", (uploadedFiles) => {
       setUploadedFiles((prevFiles) => {
         const updatedFiles = prevFiles;
@@ -56,7 +56,6 @@ const FileUpload = () => {
         return updatedFiles;
       });
 
-      // Prevent multiple toasts for the same event
       if (!toast.isActive("file-uploaded-toast")) {
         toast.success("New file(s) uploaded!", { id: "file-uploaded-toast" });
       }
@@ -67,13 +66,11 @@ const FileUpload = () => {
         prevFiles.filter((file) => file._id !== id)
       );
 
-      // Prevent multiple toasts for the same event
       if (!toast.isActive("file-deleted-toast")) {
         toast.success("A file was deleted.", { id: "file-deleted-toast" });
       }
     });
 
-    // Cleanup on unmount
     return () => {
       socket.off("fileUploaded");
       socket.off("fileDeleted");

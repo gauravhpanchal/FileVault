@@ -19,7 +19,6 @@ const Login = () => {
     e.preventDefault();
 
     try {
-      // Show a loading toast
       toast.loading("Logging in...", { id: "login" });
 
       const response = await axios.post(
@@ -33,7 +32,6 @@ const Login = () => {
       if (response.status === 200) {
         const { token, user } = response.data;
 
-        // Show success toast
         toast.success("Logged in successfully!", { id: "login" });
 
         // Save token and navigate
@@ -42,7 +40,6 @@ const Login = () => {
         navigate("/dashboard");
       }
     } catch (err) {
-      // Handle specific errors
       if (err.response && err.response.data.message) {
         const errorMessage = err.response.data.message;
 
