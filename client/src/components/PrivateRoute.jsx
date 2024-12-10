@@ -12,7 +12,7 @@ const PrivateRoute = ({ children }) => {
       if (token) {
         try {
           const response = await axios.get(
-            "https://filevault-mbnp.onrender.com/api/protected/dashboard",
+            `${import.meta.env.VITE_BACKEND_BASE_URL}/api/protected/dashboard`,
             {
               headers: { Authorization: `Bearer ${token}` },
             }

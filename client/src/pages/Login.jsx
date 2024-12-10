@@ -22,7 +22,7 @@ const Login = () => {
       toast.loading("Logging in...", { id: "login" });
 
       const response = await axios.post(
-        "https://filevault-mbnp.onrender.com/api/auth/login",
+        `${import.meta.env.VITE_BACKEND_BASE_URL}/api/auth/login`,
         {
           email: formData.email,
           password: formData.password,

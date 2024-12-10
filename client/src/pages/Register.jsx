@@ -19,7 +19,7 @@ const Register = () => {
       toast.loading("Creating your account...", { id: "register" });
 
       const response = await axios.post(
-        "https://filevault-mbnp.onrender.com/api/auth/register",
+        `${import.meta.env.VITE_BACKEND_BASE_URL}/api/auth/register`,
         {
           email: formData.email,
           password: formData.password,

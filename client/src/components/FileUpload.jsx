@@ -5,7 +5,8 @@ import { useSelector } from "react-redux";
 import { toast } from "react-hot-toast";
 import io from "socket.io-client";
 
-const socket = io("https://filevault-mbnp.onrender.com/");
+const socket = io(`${import.meta.env.VITE_BACKEND_BASE_URL}`);
+// const socket = io("https://filevault-mbnp.onrender.com/");
 
 const FileUpload = () => {
   const [files, setFiles] = useState([]);
@@ -26,7 +27,7 @@ const FileUpload = () => {
       }
 
       const response = await axios.get(
-        "https://filevault-mbnp.onrender.com/api/protected/files",
+        `${import.meta.env.VITE_BACKEND_BASE_URL}/api/protected/files`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -112,7 +113,7 @@ const FileUpload = () => {
       toast.loading("Uploading files...", { id: "upload" });
 
       const response = await axios.post(
-        "https://filevault-mbnp.onrender.com/api/protected/files/upload",
+        `${import.meta.env.VITE_BACKEND_BASE_URL}/api/protected/files/upload`,
         formData,
         {
           headers: {
@@ -151,7 +152,9 @@ const FileUpload = () => {
       }
 
       await axios.delete(
-        `https://filevault-mbnp.onrender.com/api/protected/files/${fileId}`,
+        `${
+          import.meta.env.VITE_BACKEND_BASE_URL
+        }/api/protected/files/${fileId}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }

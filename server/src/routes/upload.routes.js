@@ -7,7 +7,8 @@ import { io } from "../index.js";
 import path from "path";
 
 const router = express.Router();
-const baseURL = "https://file-vault-nine.vercel.app/uploads/";
+// const baseURL = "https://file-vault-nine.vercel.app/uploads/";
+const baseURL = "http://localhost:5173/uploads/";
 
 // Upload PDFs
 router.post(
@@ -27,7 +28,7 @@ router.post(
         };
       });
       const uploadedFiles = await PDF.insertMany(pdfs);
-      console.log(uploadedFiles);
+      // console.log(uploadedFiles);
 
       //Notify about uploaded files
       io.emit("fileUploaded", uploadedFiles);

@@ -13,7 +13,7 @@ const Navbar = () => {
   const handleLogout = async () => {
     try {
       await axios.post(
-        "https://filevault-mbnp.onrender.com/api/auth/logout"
+        `${import.meta.env.VITE_BACKEND_BASE_URL}/api/auth/logout`
         // {},
         // { withCredentials: true }
       );
