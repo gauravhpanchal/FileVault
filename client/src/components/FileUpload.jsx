@@ -318,6 +318,7 @@ const FileUpload = () => {
                   alt="PDF Icon"
                   className="h-16 w-16 mx-auto"
                 />
+
                 <p className="mt-2 text-center text-sm">{file.name}</p>
               </li>
             ))}
@@ -339,7 +340,9 @@ const FileUpload = () => {
                   alt="PDF Icon"
                   className="h-16 w-16 mx-auto object-cover"
                 />
-                <p className="text-blue-500 line-clamp-1">{file.filename}</p>
+                <a href={file.url} target="_blank">
+                  <p className="text-blue-500 line-clamp-1">{file.filename}</p>
+                </a>
                 <p className="text-xs mt-2 text-gray-500 text-center">
                   Size: {file.size} bytes
                 </p>
