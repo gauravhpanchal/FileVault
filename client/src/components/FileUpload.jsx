@@ -5,8 +5,8 @@ import { useSelector } from "react-redux";
 import { toast } from "react-hot-toast";
 import io from "socket.io-client";
 
-const socket = io(`${import.meta.env.VITE_BACKEND_BASE_URL}`);
-// const socket = io("https://filevault-mbnp.onrender.com/");
+// const socket = io(`${import.meta.env.VITE_BACKEND_BASE_URL}`);
+const socket = io("https://filevault-mbnp.onrender.com/");
 
 const FileUpload = () => {
   const [files, setFiles] = useState([]);

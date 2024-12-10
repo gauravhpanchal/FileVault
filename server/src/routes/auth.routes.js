@@ -49,6 +49,26 @@ router.post("/login", async (req, res) => {
   }
 });
 
+router.post("/google-login", async (req, res) => {
+  try {
+    const { email, name } = req.body;
+
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      user = await User.create({ email, password: "google-auth" }); // Placeholder password
+    }
+
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: "1d",
+    });
+
+    res.status(200).json({ token, user: { id: user._id, email: user.email } });
+  } catch (error) {
+    res.status(500).json({ message: "Google login failed" });
+  }
+});
+
 router.post("/logout", (req, res) => {
   res.clearCookie("token");
   res.json({ message: "Logged out successfully" });
