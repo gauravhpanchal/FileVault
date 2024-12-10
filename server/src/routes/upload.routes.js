@@ -91,7 +91,6 @@ router.delete("/:id", authMiddleware, async (req, res) => {
         .json({ message: "Unauthorized or file not found" });
     }
 
-    fs.unlinkSync(file.filepath); // Delete
     await PDF.findByIdAndDelete(req.params.id);
 
     //Notify about Deleted files

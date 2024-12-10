@@ -53,7 +53,7 @@ const FileUpload = () => {
   useEffect(() => {
     fetchFiles();
 
-    socket.on("fileUploaded", (uploadedFiles) => {
+    const handleFileUpload = (uploadedFiles) => {
       setUploadedFiles((prevFiles) => {
         const updatedFiles = [...prevFiles];
         uploadedFiles.forEach((file) => {
@@ -67,9 +67,9 @@ const FileUpload = () => {
       if (!toast.isActive("file-uploaded-toast")) {
         toast.success("New file(s) uploaded!", { id: "file-uploaded-toast" });
       }
-    });
+    };
 
-    socket.on("fileDeleted", ({ id }) => {
+    const handleFileDelete = ({ id }) => {
       setUploadedFiles((prevFiles) =>
         prevFiles.filter((file) => file._id !== id)
       );
@@ -77,7 +77,35 @@ const FileUpload = () => {
       if (!toast.isActive("file-deleted-toast")) {
         toast.success("A file was deleted.", { id: "file-deleted-toast" });
       }
-    });
+    };
+
+    socket.on("fileUploaded", handleFileUpload);
+    socket.on("fileDeleted", handleFileDelete);
+
+    // socket.on("fileUploaded", (uploadedFiles) => {
+    //   setUploadedFiles((prevFiles) => {
+    //     const updatedFiles = [...prevFiles];
+    //     uploadedFiles.forEach((file) => {
+    //       if (prevFiles.findIndex((x) => x._id === file._id) === -1) {
+    //         updatedFiles.push(file);
+    //       }
+    //     });
+    //     return updatedFiles;
+    //   });
+
+    //   if (!toast.isActive("file-uploaded-toast")) {
+    //     toast.success("New file(s) uploaded!", { id: "file-uploaded-toast" });
+    //   }
+    // });
+    // socket.on("fileDeleted", ({ id }) => {
+    //   setUploadedFiles((prevFiles) =>
+    //     prevFiles.filter((file) => file._id !== id)
+    //   );
+
+    //   if (!toast.isActive("file-deleted-toast")) {
+    //     toast.success("A file was deleted.", { id: "file-deleted-toast" });
+    //   }
+    // });
 
     return () => {
       socket.off("fileUploaded");
@@ -208,6 +236,8 @@ const FileUpload = () => {
   };
 
   const handleDelete = async (fileId) => {
+    // 6758626204f152c37bbb0389
+    console.log(fileId);
     try {
       const token = localStorage.getItem("authToken");
       if (!token) {
@@ -225,7 +255,7 @@ const FileUpload = () => {
       }
 
       // Use the stored filepath directly
-      const storageRef = ref(storage, fileToDelete.filePath);
+      const storageRef = ref(storage, fileToDelete.url);
 
       try {
         await deleteObject(storageRef);
