@@ -11,37 +11,63 @@ const router = express.Router();
 const baseURL = "http://localhost:5173/uploads/";
 
 // Upload PDFs
-router.post(
-  "/upload",
-  authMiddleware,
-  upload.array("pdfs", 10),
-  async (req, res) => {
-    try {
-      const pdfs = req.files.map((file) => {
-        const fileUrl = `${baseURL}${file.filename}`;
-        return {
-          user: req.user._id,
-          filename: file.filename,
-          filepath: file.path,
-          url: fileUrl,
-          size: file.size,
-        };
-      });
-      const uploadedFiles = await PDF.insertMany(pdfs);
-      // console.log(uploadedFiles);
+// router.post(
+//   "/upload",
+//   authMiddleware,
+//   upload.array("pdfs", 10),
+//   async (req, res) => {
+//     try {
+//       const pdfs = req.files.map((file) => {
+//         const fileUrl = `${baseURL}${file.filename}`;
+//         return {
+//           user: req.user._id,
+//           filename: file.filename,
+//           filepath: file.path,
+//           url: fileUrl,
+//           size: file.size,
+//         };
+//       });
+//       const uploadedFiles = await PDF.insertMany(pdfs);
+//       // console.log(uploadedFiles);
 
-      //Notify about uploaded files
-      io.emit("fileUploaded", uploadedFiles);
-      res
-        .status(201)
-        .json({ message: "Files uploaded successfully", files: uploadedFiles });
-    } catch (error) {
-      res
-        .status(500)
-        .json({ message: "File upload failed", error: error.message });
-    }
+//       //Notify about uploaded files
+//       io.emit("fileUploaded", uploadedFiles);
+//       res
+//         .status(201)
+//         .json({ message: "Files uploaded successfully", files: uploadedFiles });
+//     } catch (error) {
+//       res
+//         .status(500)
+//         .json({ message: "File upload failed", error: error.message });
+//     }
+//   }
+// );
+
+router.post("/upload", authMiddleware, async (req, res) => {
+  try {
+    const { files } = req.body;
+
+    const pdfs = files.map((file) => ({
+      user: req.user._id,
+      filename: file.filename,
+      // filepath:file.path,
+      url: file.url,
+      size: file.size,
+    }));
+
+    const uploadedFiles = await PDF.insertMany(pdfs);
+
+    //Notify about uploaded files
+    io.emit("fileUploaded", uploadedFiles);
+    res
+      .status(201)
+      .json({ message: "Files uploaded successfully", files: uploadedFiles });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "File upload failed", error: error.message });
   }
-);
+});
 
 // List User's PDFs
 router.get("/", authMiddleware, async (req, res) => {

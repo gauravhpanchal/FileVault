@@ -4,8 +4,14 @@ import { Upload } from "lucide-react";
 import { useSelector } from "react-redux";
 import { toast } from "react-hot-toast";
 import io from "socket.io-client";
+import { storage } from "../firebase/firebase";
+import {
+  ref,
+  uploadBytesResumable,
+  getDownloadURL,
+  deleteObject,
+} from "firebase/storage";
 
-// const socket = io(`${import.meta.env.VITE_BACKEND_BASE_URL}`);
 const socket = io("https://filevault-mbnp.onrender.com/");
 
 const FileUpload = () => {
@@ -13,6 +19,9 @@ const FileUpload = () => {
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [currentFileIndex, setCurrentFileIndex] = useState(0);
+
+  console.log(uploadedFiles);
 
   // Current Logged-in User
   const user = useSelector((state) => state.auth.user.email);
@@ -20,7 +29,6 @@ const FileUpload = () => {
   const fetchFiles = async () => {
     try {
       const token = localStorage.getItem("authToken");
-
       if (!token) {
         toast.error("You are not logged in. Please log in to view your files.");
         return;
@@ -45,10 +53,9 @@ const FileUpload = () => {
   useEffect(() => {
     fetchFiles();
 
-    // Real-time updates from the backend
     socket.on("fileUploaded", (uploadedFiles) => {
       setUploadedFiles((prevFiles) => {
-        const updatedFiles = prevFiles;
+        const updatedFiles = [...prevFiles];
         uploadedFiles.forEach((file) => {
           if (prevFiles.findIndex((x) => x._id === file._id) === -1) {
             updatedFiles.push(file);
@@ -80,14 +87,18 @@ const FileUpload = () => {
 
   const handleFileChange = (event) => {
     const selectedFiles = Array.from(event.target.files);
+    console.log(selectedFiles);
+
     const invalidFiles = selectedFiles.filter(
       (file) => file.type !== "application/pdf"
     );
 
     if (invalidFiles.length > 0) {
       toast.error(
-        `Invalid file type(s) detected. Only PDF files are allowed.`,
-        { id: "file-type-error" }
+        "Invalid file type(s) detected. Only PDF files are allowed.",
+        {
+          id: "file-type-error",
+        }
       );
       return;
     }
@@ -96,13 +107,47 @@ const FileUpload = () => {
     toast.success("Files ready for upload!");
   };
 
+  const uploadToFirebase = async (file) => {
+    return new Promise((resolve, reject) => {
+      const timestamp = Date.now();
+      // Ensure filename is URL-safe
+      const safeFileName = file.name.replace(/[^a-zA-Z0-9.]/g, "_");
+      const filePath = `pdfs/${timestamp}_${safeFileName}`;
+      const storageRef = ref(storage, filePath);
+      const uploadTask = uploadBytesResumable(storageRef, file);
+
+      uploadTask.on(
+        "state_changed",
+        (snapshot) => {
+          const progress =
+            (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          setProgress(Math.round(progress));
+        },
+        (error) => {
+          reject(error);
+        },
+        async () => {
+          try {
+            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+            resolve({
+              filename: `${timestamp}_${safeFileName}`,
+              filepath: filePath, // Store the exact path used in Firebase
+              url: downloadURL,
+              size: file.size,
+            });
+          } catch (error) {
+            reject(error);
+          }
+        }
+      );
+    });
+  };
+
   const handleUpload = async () => {
-    const formData = new FormData();
-    Array.from(files).forEach((file) => formData.append("pdfs", file));
+    if (!files.length) return;
 
     try {
       const token = localStorage.getItem("authToken");
-
       if (!token) {
         toast.error("You are not logged in. Please log in to upload files.");
         return;
@@ -110,47 +155,95 @@ const FileUpload = () => {
 
       setIsUploading(true);
       setProgress(0);
-      toast.loading("Uploading files...", { id: "upload" });
+      setCurrentFileIndex(0);
 
-      const response = await axios.post(
-        `${import.meta.env.VITE_BACKEND_BASE_URL}/api/protected/files/upload`,
-        formData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "multipart/form-data",
-            User: user,
-          },
-          onUploadProgress: (progressEvent) => {
-            const percent = Math.round(
-              (progressEvent.loaded * 100) / progressEvent.total
-            );
-            setProgress(percent);
-          },
+      const uploadedFiles = [];
+
+      // Upload files one by one
+      for (let i = 0; i < files.length; i++) {
+        setCurrentFileIndex(i);
+        toast.loading(`Uploading file ${i + 1} of ${files.length}...`, {
+          id: "upload",
+        });
+
+        try {
+          const result = await uploadToFirebase(files[i]);
+          uploadedFiles.push(result);
+        } catch (error) {
+          console.error(`Error uploading file ${files[i].name}:`, error);
+          toast.error(`Failed to upload ${files[i].name}`);
         }
-      );
+      }
 
-      setFiles([]); // Clear selected files
-      toast.success("Files uploaded successfully!", { id: "upload" });
+      if (uploadedFiles.length > 0) {
+        // Send the URLs to your backend
+        const response = await axios.post(
+          `${import.meta.env.VITE_BACKEND_BASE_URL}/api/protected/files/upload`,
+          { files: uploadedFiles },
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+              User: user,
+            },
+          }
+        );
+
+        setFiles([]);
+        toast.success("Files uploaded successfully!", { id: "upload" });
+        fetchFiles();
+      }
     } catch (error) {
-      toast.error("Error uploading files. Please try again later.", {
-        id: "upload",
-      });
+      console.error("Upload error:", error);
+      toast.error(
+        error.response?.data?.message ||
+          "Error uploading files. Please try again later.",
+        { id: "upload" }
+      );
     } finally {
       setIsUploading(false);
-      setProgress(0); // Reset progress
+      setProgress(0);
+      setCurrentFileIndex(0);
     }
   };
 
   const handleDelete = async (fileId) => {
     try {
       const token = localStorage.getItem("authToken");
-
       if (!token) {
         toast.error("You are not logged in. Please log in to delete files.");
         return;
       }
 
+      // Find the file in uploadedFiles to get the Firebase path
+      const fileToDelete = uploadedFiles.find((file) => file._id === fileId);
+      console.log(fileToDelete);
+
+      if (!fileToDelete) {
+        toast.error("File not found");
+        return;
+      }
+
+      // Use the stored filepath directly
+      const storageRef = ref(storage, fileToDelete.filePath);
+
+      try {
+        await deleteObject(storageRef);
+        console.log("File deleted from Firebase successfully");
+      } catch (firebaseError) {
+        console.error("Firebase deletion error:", firebaseError);
+        if (firebaseError.code === "storage/object-not-found") {
+          // If file doesn't exist in Firebase, proceed with database deletion
+          console.log(
+            "File not found in Firebase, proceeding with database deletion"
+          );
+        } else {
+          toast.error("Error deleting file from storage");
+          return;
+        }
+      }
+
+      // Delete from backend
       await axios.delete(
         `${
           import.meta.env.VITE_BACKEND_BASE_URL
@@ -162,13 +255,12 @@ const FileUpload = () => {
 
       toast.success("File deleted successfully!");
     } catch (error) {
+      console.error("Delete error:", error);
       toast.error("Error deleting file. Please try again later.");
     }
   };
-
   return (
     <div className="p-6 max-w-4xl mx-auto">
-      {/* Upload Section */}
       <div className="border-2 border-dashed rounded-lg p-8 text-center hover:border-indigo-400">
         <label htmlFor="file-upload" className="block cursor-pointer">
           <Upload className="mx-auto h-12 w-12 text-gray-400" />
@@ -186,6 +278,7 @@ const FileUpload = () => {
           className="hidden"
         />
       </div>
+
       <button
         onClick={handleUpload}
         className={`mt-4 w-full px-4 py-2 rounded-lg text-white ${
@@ -195,20 +288,22 @@ const FileUpload = () => {
         }`}
         disabled={isUploading || !files.length}
       >
-        {isUploading ? `Uploading... ${progress}%` : "Upload Files"}
+        {isUploading
+          ? `Uploading file ${currentFileIndex + 1}/${
+              files.length
+            } - ${progress}%`
+          : "Upload Files"}
       </button>
 
-      {/* Progress Bar */}
       {isUploading && (
         <div className="w-full bg-gray-200 rounded-lg mt-4">
           <div
-            className="bg-indigo-500 h-2 rounded-lg"
+            className="bg-indigo-500 h-2 rounded-lg transition-all duration-300"
             style={{ width: `${progress}%` }}
           ></div>
         </div>
       )}
 
-      {/* Selected Files Preview */}
       {files.length > 0 && (
         <div className="mt-6">
           <h3 className="text-lg font-semibold mb-2">Selected Files</h3>
@@ -230,7 +325,6 @@ const FileUpload = () => {
         </div>
       )}
 
-      {/* Uploaded Files */}
       <div className="mt-6">
         <h3 className="text-lg font-semibold mb-2">Uploaded Files</h3>
         {uploadedFiles.length > 0 ? (
