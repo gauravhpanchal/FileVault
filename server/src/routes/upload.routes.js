@@ -1,48 +1,11 @@
 import express from "express";
 import { authMiddleware } from "../middlewares/auth.middleware.js";
 import PDF from "../models/Pdf.model.js";
-import { upload } from "../middlewares/upload.middleware.js";
-import fs from "fs";
 import { io } from "../index.js";
-import path from "path";
 
 const router = express.Router();
-// const baseURL = "https://file-vault-nine.vercel.app/uploads/";
-const baseURL = "http://localhost:5173/uploads/";
 
 // Upload PDFs
-// router.post(
-//   "/upload",
-//   authMiddleware,
-//   upload.array("pdfs", 10),
-//   async (req, res) => {
-//     try {
-//       const pdfs = req.files.map((file) => {
-//         const fileUrl = `${baseURL}${file.filename}`;
-//         return {
-//           user: req.user._id,
-//           filename: file.filename,
-//           filepath: file.path,
-//           url: fileUrl,
-//           size: file.size,
-//         };
-//       });
-//       const uploadedFiles = await PDF.insertMany(pdfs);
-//       // console.log(uploadedFiles);
-
-//       //Notify about uploaded files
-//       io.emit("fileUploaded", uploadedFiles);
-//       res
-//         .status(201)
-//         .json({ message: "Files uploaded successfully", files: uploadedFiles });
-//     } catch (error) {
-//       res
-//         .status(500)
-//         .json({ message: "File upload failed", error: error.message });
-//     }
-//   }
-// );
-
 router.post("/upload", authMiddleware, async (req, res) => {
   try {
     const { files } = req.body;
@@ -58,7 +21,21 @@ router.post("/upload", authMiddleware, async (req, res) => {
     const uploadedFiles = await PDF.insertMany(pdfs);
 
     //Notify about uploaded files
-    io.emit("fileUploaded", uploadedFiles);
+    if (io.sockets.sockets.size > 0) {
+      const socketId = Array.from(io.sockets.sockets.keys())[0];
+      console.log(
+        `File upload connection established - Socket ID: ${socketId}, User: ${req.user._id}`
+      );
+
+      io.emit("fileUploaded", uploadedFiles);
+
+      // Listen for disconnect on this specific socket
+      io.sockets.sockets.get(socketId).on("disconnect", () => {
+        console.log(
+          `File upload connection closed - Socket ID: ${socketId}, User: ${req.user._id}`
+        );
+      });
+    }
     res
       .status(201)
       .json({ message: "Files uploaded successfully", files: uploadedFiles });
@@ -94,8 +71,21 @@ router.delete("/:id", authMiddleware, async (req, res) => {
     await PDF.findByIdAndDelete(req.params.id);
 
     //Notify about Deleted files
-    io.emit("fileDeleted", { id: req.params.id });
+    if (io.sockets.sockets.size > 0) {
+      const socketId = Array.from(io.sockets.sockets.keys())[0];
+      console.log(
+        `File deletion connection established - Socket ID: ${socketId}, User: ${req.user._id}, File: ${req.params.id}`
+      );
 
+      io.emit("fileDeleted", { id: req.params.id });
+
+      // Listen for disconnect on this specific socket
+      io.sockets.sockets.get(socketId).on("disconnect", () => {
+        console.log(
+          `File deletion connection closed - Socket ID: ${socketId}, User: ${req.user._id}`
+        );
+      });
+    }
     res.status(200).json({ message: "File deleted successfully" });
   } catch (error) {
     res

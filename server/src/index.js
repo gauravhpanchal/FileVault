@@ -15,6 +15,21 @@ dotenv.config();
 
 const app = express();
 
+const server = http.createServer(app);
+
+// Socket.io setup
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+    credentials: true,
+  },
+  connectionStateRecovery: {
+    maxDisconnectionDuration: 2000,
+  },
+  pingTimeout: 60000,
+  pingInterval: 25000,
+});
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -36,23 +51,6 @@ mongoose
   .connect(process.env.MONGODB_URI)
   .then(() => console.log("Connected to MongoDB"))
   .catch((err) => console.error("MongoDB connection error:", err));
-
-const server = http.createServer(app);
-const io = new Server(server, {
-  cors: {
-    origin: "*",
-    credentials: true,
-  },
-});
-
-// Socket.io connection
-io.on("connection", (socket) => {
-  console.log("A user connected:", socket.id);
-
-  socket.on("disconnect", () => {
-    console.log("A user disconnected:", socket.id);
-  });
-});
 
 // Start server
 const PORT = process.env.PORT || 5000;

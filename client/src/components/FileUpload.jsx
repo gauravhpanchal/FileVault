@@ -12,16 +12,26 @@ import {
   deleteObject,
 } from "firebase/storage";
 
-const socket = io("https://filevault-mbnp.onrender.com/");
-
 const FileUpload = () => {
   const [files, setFiles] = useState([]);
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [currentFileIndex, setCurrentFileIndex] = useState(0);
+  const [socket, setSocket] = useState(null);
 
-  console.log(uploadedFiles);
+  const connectSocket = () => {
+    const newSocket = io("https://filevault-mbnp.onrender.com/");
+    setSocket(newSocket);
+    return newSocket;
+  };
+
+  const disconnectSocket = () => {
+    if (socket) {
+      socket.disconnect();
+      setSocket(null);
+    }
+  };
 
   // Current Logged-in User
   const user = useSelector((state) => state.auth.user.email);
@@ -52,70 +62,36 @@ const FileUpload = () => {
 
   useEffect(() => {
     fetchFiles();
-
-    const handleFileUpload = (uploadedFiles) => {
-      setUploadedFiles((prevFiles) => {
-        const updatedFiles = [...prevFiles];
-        uploadedFiles.forEach((file) => {
-          if (prevFiles.findIndex((x) => x._id === file._id) === -1) {
-            updatedFiles.push(file);
-          }
-        });
-        return updatedFiles;
-      });
-
-      if (!toast.isActive("file-uploaded-toast")) {
-        toast.success("New file(s) uploaded!", { id: "file-uploaded-toast" });
-      }
-    };
-
-    const handleFileDelete = ({ id }) => {
-      setUploadedFiles((prevFiles) =>
-        prevFiles.filter((file) => file._id !== id)
-      );
-
-      if (!toast.isActive("file-deleted-toast")) {
-        toast.success("A file was deleted.", { id: "file-deleted-toast" });
-      }
-    };
-
-    socket.on("fileUploaded", handleFileUpload);
-    socket.on("fileDeleted", handleFileDelete);
-
-    // socket.on("fileUploaded", (uploadedFiles) => {
-    //   setUploadedFiles((prevFiles) => {
-    //     const updatedFiles = [...prevFiles];
-    //     uploadedFiles.forEach((file) => {
-    //       if (prevFiles.findIndex((x) => x._id === file._id) === -1) {
-    //         updatedFiles.push(file);
-    //       }
-    //     });
-    //     return updatedFiles;
-    //   });
-
-    //   if (!toast.isActive("file-uploaded-toast")) {
-    //     toast.success("New file(s) uploaded!", { id: "file-uploaded-toast" });
-    //   }
-    // });
-    // socket.on("fileDeleted", ({ id }) => {
-    //   setUploadedFiles((prevFiles) =>
-    //     prevFiles.filter((file) => file._id !== id)
-    //   );
-
-    //   if (!toast.isActive("file-deleted-toast")) {
-    //     toast.success("A file was deleted.", { id: "file-deleted-toast" });
-    //   }
-    // });
-
-    return () => {
-      socket.off("fileUploaded");
-      socket.off("fileDeleted");
-    };
   }, []);
+
+  const handleFileUpload = (uploadedFiles) => {
+    setUploadedFiles((prevFiles) => {
+      const updatedFiles = [...prevFiles];
+      uploadedFiles.forEach((file) => {
+        if (prevFiles.findIndex((x) => x._id === file._id) === -1) {
+          updatedFiles.push(file);
+        }
+      });
+      return updatedFiles;
+    });
+
+    if (!toast.isActive("file-uploaded-toast")) {
+      toast.success("New file(s) uploaded!", { id: "file-uploaded-toast" });
+    }
+  };
+
+  const handleFileDelete = ({ id }) => {
+    setUploadedFiles((prevFiles) =>
+      prevFiles.filter((file) => file._id !== id)
+    );
+
+    if (!toast.isActive("file-deleted-toast")) {
+      toast.success("A file was deleted.", { id: "file-deleted-toast" });
+    }
+  };
 
   const handleFileChange = (event) => {
     const selectedFiles = Array.from(event.target.files);
-    console.log(selectedFiles);
 
     const invalidFiles = selectedFiles.filter(
       (file) => file.type !== "application/pdf"
@@ -185,6 +161,7 @@ const FileUpload = () => {
       setProgress(0);
       setCurrentFileIndex(0);
 
+      const uploadSocket = connectSocket();
       const uploadedFiles = [];
 
       // Upload files one by one
@@ -217,9 +194,17 @@ const FileUpload = () => {
           }
         );
 
+        uploadSocket.on("fileUploaded", handleFileUpload);
+
         setFiles([]);
         toast.success("Files uploaded successfully!", { id: "upload" });
         fetchFiles();
+
+        // Cleanup socket connection
+        setTimeout(() => {
+          uploadSocket.off("fileUploaded");
+          disconnectSocket();
+        }, 1000);
       }
     } catch (error) {
       console.error("Upload error:", error);
@@ -236,8 +221,6 @@ const FileUpload = () => {
   };
 
   const handleDelete = async (fileId) => {
-    // 6758626204f152c37bbb0389
-    console.log(fileId);
     try {
       const token = localStorage.getItem("authToken");
       if (!token) {
@@ -245,9 +228,10 @@ const FileUpload = () => {
         return;
       }
 
+      const deleteSocket = connectSocket();
+
       // Find the file in uploadedFiles to get the Firebase path
       const fileToDelete = uploadedFiles.find((file) => file._id === fileId);
-      console.log(fileToDelete);
 
       if (!fileToDelete) {
         toast.error("File not found");
@@ -283,7 +267,14 @@ const FileUpload = () => {
         }
       );
 
+      deleteSocket.on("fileDeleted", handleFileDelete);
+
       toast.success("File deleted successfully!");
+
+      setTimeout(() => {
+        deleteSocket.off("fileDeleted");
+        disconnectSocket();
+      }, 1000);
     } catch (error) {
       console.error("Delete error:", error);
       toast.error("Error deleting file. Please try again later.");
