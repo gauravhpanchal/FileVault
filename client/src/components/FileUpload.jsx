@@ -22,14 +22,16 @@ const FileUpload = () => {
 
   const connectSocket = () => {
     const newSocket = io("https://filevault-mbnp.onrender.com/");
-    setSocket(newSocket);
+    // const newSocket = io("http://localhost:8000/");
+    // setSocket(newSocket);
     return newSocket;
   };
 
-  const disconnectSocket = () => {
-    if (socket) {
-      socket.disconnect();
-      setSocket(null);
+  const disconnectSocket = (activeSocket) => {
+    if (activeSocket) {
+      activeSocket.disconnect();
+      fetchFiles();
+      // setSocket(null);
     }
   };
 
@@ -201,10 +203,8 @@ const FileUpload = () => {
         fetchFiles();
 
         // Cleanup socket connection
-        setTimeout(() => {
-          uploadSocket.off("fileUploaded");
-          disconnectSocket();
-        }, 1000);
+        uploadSocket.off("fileUploaded");
+        disconnectSocket(uploadSocket);
       }
     } catch (error) {
       console.error("Upload error:", error);
@@ -271,10 +271,8 @@ const FileUpload = () => {
 
       toast.success("File deleted successfully!");
 
-      setTimeout(() => {
-        deleteSocket.off("fileDeleted");
-        disconnectSocket();
-      }, 1000);
+      deleteSocket.off("fileDeleted");
+      disconnectSocket(deleteSocket);
     } catch (error) {
       console.error("Delete error:", error);
       toast.error("Error deleting file. Please try again later.");
